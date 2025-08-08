@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft火炮弹道分析器</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    <script src="https://cdn.staticfile.org/Chart.js/3.9.1/chart.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- 标题 -->
+        <header class="header">
+            <h1>Minecraft火炮弹道分析器</h1>
+        </header>
+
+        <!-- 修改区域 -->
+        <section class="modify-section">
+            <div class="button-group">
+                <button id="addBtn" class="btn btn-primary">📝 添加</button>
+                <button id="deleteBtn" class="btn btn-danger">🗑️ 删除</button>
+                <button id="importBtn" class="btn btn-success">📁 导入</button>
+                <button id="exportBtn" class="btn btn-info">💾 导出</button>
+            </div>
+        </section>
+
+        <div class="main-content">
+            <!-- 曲线图区域 -->
+            <section class="chart-section">
+                <div class="chart-container">
+                    <canvas id="trajectoryChart"></canvas>
+                </div>
+            </section>
+
+            <!-- 曲线图设置区域 -->
+            <section class="settings-section">
+                <div class="visibility-controls">
+                    <button id="showAllBtn" class="btn btn-outline">👁️ 全部显示</button>
+                    <button id="hideAllBtn" class="btn btn-outline">🙈 全部隐藏</button>
+                </div>
+                <div id="cannonList" class="cannon-list">
+                    <!-- 火炮列表将动态生成 -->
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- 添加火炮弹窗 -->
+    <div id="addModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>添加新火炮</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>极限射程 (格):</label>
+                    <input type="number" id="maxRange" value="1250" min="100" max="5000">
+                </div>
+                <div class="form-group">
+                    <label>射程采样频率 (格):</label>
+                    <input type="number" id="sampleFreq" value="50" min="10" max="200">
+                </div>
+                <button id="applyBasicBtn" class="btn btn-primary">✅ 确认基础数值</button>
+                
+                <div id="detailsForm" class="details-form" style="display: none;">
+                    <div class="form-group">
+                        <label>作者名称:</label>
+                        <input type="text" id="authorInput" placeholder="输入作者名称">
+                        <select id="authorSelect">
+                            <option value="">选择已有作者</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>火炮名称:</label>
+                        <input type="text" id="cannonName" placeholder="输入火炮名称" required>
+                    </div>
+                    
+                    <div id="rangeCards" class="range-cards">
+                        <!-- 射程卡片将动态生成 -->
+                    </div>
+                    
+                    <button id="confirmAddBtn" class="btn btn-success">🚀 确认添加</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 删除火炮弹窗 -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>删除火炮</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="deleteCannonList" class="delete-cannon-list">
+                    <!-- 删除列表将动态生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 确认删除弹窗 -->
+    <div id="confirmDeleteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>确认删除</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p id="deleteConfirmText"></p>
+                <div class="button-group">
+                    <button id="confirmDeleteBtn" class="btn btn-danger">🗑️ 确认删除</button>
+                    <button id="cancelDeleteBtn" class="btn btn-outline">❌ 取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 隐藏的文件输入 -->
+    <input type="file" id="fileInput" accept=".json" style="display: none;">
+
+    <script src="js/database.js"></script>
+    <script src="js/chart.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
