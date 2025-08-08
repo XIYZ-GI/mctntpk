@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minecraft火炮火力曲线</title>
+    <title>Minecraft火炮弹道分析器</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/responsive.css">
-    <script src="https://cdn.staticfile.org/Chart.js/3.9.1/chart.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -121,6 +120,49 @@
 
     <!-- 隐藏的文件输入 -->
     <input type="file" id="fileInput" accept=".json" style="display: none;">
+
+    <!-- 加载Chart.js -->
+    <script>
+        // 检查Chart.js加载状态
+        let chartJSLoaded = false;
+        let chartJSError = false;
+        
+        function loadChartJS() {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js';
+            script.onload = function() {
+                console.log('Chart.js加载成功');
+                chartJSLoaded = true;
+                window.dispatchEvent(new Event('chartjs-loaded'));
+            };
+            script.onerror = function() {
+                console.error('Chart.js加载失败，尝试备用CDN');
+                chartJSError = true;
+                loadChartJSFallback();
+            };
+            document.head.appendChild(script);
+        }
+        
+        function loadChartJSFallback() {
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/chart.js@3.9.1/dist/chart.min.js';
+            script.onload = function() {
+                console.log('Chart.js备用CDN加载成功');
+                chartJSLoaded = true;
+                chartJSError = false;
+                window.dispatchEvent(new Event('chartjs-loaded'));
+            };
+            script.onerror = function() {
+                console.error('所有Chart.js CDN都加载失败');
+                chartJSError = true;
+                window.dispatchEvent(new Event('chartjs-error'));
+            };
+            document.head.appendChild(script);
+        }
+        
+        // 开始加载Chart.js
+        loadChartJS();
+    </script>
 
     <script src="js/database.js"></script>
     <script src="js/chart.js"></script>
