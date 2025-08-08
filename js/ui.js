@@ -151,24 +151,29 @@ class UIManager {
         const cardsContainer = document.getElementById('rangeCards');
         cardsContainer.innerHTML = '';
         
-        for (let range = 0; range < maxRange; range += sampleFreq) {
+        // 从0开始，按采样频率递增
+        for (let range = 0; range <= maxRange; range += sampleFreq) {
             const endRange = Math.min(range + sampleFreq, maxRange);
             
             const card = document.createElement('div');
             card.className = 'range-card';
+            
+            // 如果是第一个卡片（range=0），显示为0-50格
+            const displayRange = range === 0 ? `0-${sampleFreq}格` : `${range}-${endRange}格`;
+            
             card.innerHTML = `
-                <h4>${range}-${endRange}格</h4>
+                <h4>${displayRange}</h4>
                 <div class="trajectory-group">
-                    <label>-30~50格弹道数量:</label>
-                    <input type="number" data-range="${range + sampleFreq/2}" data-type="low" min="0" max="1000" value="0">
+                    <label>-30~50格高度弹道数量:</label>
+                    <input type="number" data-range="${range}" data-type="low" min="0" max="1000" value="0">
                 </div>
                 <div class="trajectory-group">
-                    <label>50~130格弹道数量:</label>
-                    <input type="number" data-range="${range + sampleFreq/2}" data-type="medium" min="0" max="1000" value="0">
+                    <label>50~130格高度弹道数量:</label>
+                    <input type="number" data-range="${range}" data-type="medium" min="0" max="1000" value="0">
                 </div>
                 <div class="trajectory-group">
-                    <label>130~170格弹道数量:</label>
-                    <input type="number" data-range="${range + sampleFreq/2}" data-type="high" min="0" max="1000" value="0">
+                    <label>130~170格高度弹道数量:</label>
+                    <input type="number" data-range="${range}" data-type="high" min="0" max="1000" value="0">
                 </div>
             `;
             
@@ -204,11 +209,15 @@ class UIManager {
             const medium = parseInt(inputs[1].value) || 0;
             const high = parseInt(inputs[2].value) || 0;
             
+            // 计算总弹道数量（所有高度的弹道数量相加）
+            const total = low + medium + high;
+            
             trajectoryData.push({
                 range: range,
                 low: low,
                 medium: medium,
-                high: high
+                high: high,
+                total: total  // 添加总数
             });
         });
         
@@ -242,6 +251,17 @@ class UIManager {
         const cannons = await cannonDB.getAllCannons();
         const deleteList = document.getElementById('deleteCannonList');
         deleteList.innerHTML = '';
+        
+        if (cannons.length === 0) {
+            deleteList.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: rgba(255,255,255,0.7);">
+                    <div style="font-size: 48px; margin-bottom: 15px;">📭</div>
+                    <div style="font-size: 18px; margin-bottom: 10px;">暂无火炮数据</div>
+                    <div style="font-size: 14px;">请先添加一些火炮数据</div>
+                </div>
+            `;
+            return;
+        }
         
         // 按作者分组
         const authorGroups = {};
@@ -317,7 +337,21 @@ class UIManager {
             const data = JSON.parse(text);
             
             if (Array.isArray(data)) {
-                await cannonDB.importData(data);
+                // 处理导入的数据，确保包含total字段
+                const processedData = data.map(cannon => {
+                    if (cannon.trajectoryData && Array.isArray(cannon.trajectoryData)) {
+                        cannon.trajectoryData = cannon.trajectoryData.map(rangeData => {
+                            // 如果没有total字段，计算总数
+                            if (typeof rangeData.total === 'undefined') {
+                                rangeData.total = (rangeData.low || 0) + (rangeData.medium || 0) + (rangeData.high || 0);
+                            }
+                            return rangeData;
+                        });
+                    }
+                    return cannon;
+                });
+                
+                await cannonDB.importData(processedData);
                 await this.updateCannonList();
                 alert(`成功导入${data.length}个火炮数据！`);
             } else {
@@ -361,6 +395,17 @@ class UIManager {
         const cannonList = document.getElementById('cannonList');
         cannonList.innerHTML = '';
         
+        if (cannons.length === 0) {
+            cannonList.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: rgba(255,255,255,0.7);">
+                    <div style="font-size: 48px; margin-bottom: 15px;">📊</div>
+                    <div style="font-size: 18px; margin-bottom: 10px;">暂无火炮数据</div>
+                    <div style="font-size: 14px;">点击"添加"按钮开始创建火炮数据</div>
+                </div>
+            `;
+            return;
+        }
+        
         // 按作者分组
         const authorGroups = {};
         cannons.forEach(cannon => {
@@ -386,7 +431,7 @@ class UIManager {
                 cannonCard.textContent = cannon.name;
                 
                 // 设置卡片状态
-                if (trajectoryChart.isVisible(cannon.id)) {
+                if (trajectoryChart && trajectoryChart.isVisible(cannon.id)) {
                     cannonCard.classList.add('active');
                 } else {
                     cannonCard.classList.add('inactive');
@@ -405,6 +450,11 @@ class UIManager {
 
     // 切换火炮显示状态
     toggleCannon(cannonId, cardElement) {
+        if (!trajectoryChart || !trajectoryChart.isReady()) {
+            alert('图表未初始化，无法切换显示状态');
+            return;
+        }
+        
         if (trajectoryChart.isVisible(cannonId)) {
             trajectoryChart.hideCannon(cannonId);
             cardElement.classList.remove('active');

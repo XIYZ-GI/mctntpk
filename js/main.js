@@ -33,10 +33,10 @@ class MinecraftCannonApp {
             this.showLoadingMessage('正在初始化图表...');
             await this.initChart();
             
-            // 步骤3: 加载初始数据
-            console.log('步骤3: 加载初始数据...');
-            this.showLoadingMessage('正在加载数据...');
-            await this.loadInitialData();
+            // 步骤3: 加载初始数据（不再添加示例数据）
+            console.log('步骤3: 检查数据...');
+            this.showLoadingMessage('正在检查数据...');
+            await this.checkInitialData();
             
             // 步骤4: 更新UI
             console.log('步骤4: 更新UI...');
@@ -120,8 +120,8 @@ class MinecraftCannonApp {
                 this.showChartFallback();
             }
             
-            // 加载基本数据
-            await this.loadInitialData();
+            // 检查数据
+            await this.checkInitialData();
             await uiManager.updateCannonList();
             
             this.hideLoadingMessage();
@@ -289,91 +289,24 @@ class MinecraftCannonApp {
         }
     }
 
-    // 加载初始数据
-    async loadInitialData() {
+    // 检查初始数据（不添加示例数据）
+    async checkInitialData() {
         try {
             const cannons = await cannonDB.getAllCannons();
             console.log('当前数据库中的火炮数量:', cannons.length);
             
-            // 如果没有数据，添加示例数据
-            if (cannons.length === 0) {
-                console.log('没有数据，添加示例数据');
-                await this.addSampleData();
-            }
-            
-            // 默认显示所有火炮
-            if (trajectoryChart && trajectoryChart.isReady()) {
+            // 如果有数据且图表已就绪，默认显示所有火炮
+            if (cannons.length > 0 && trajectoryChart && trajectoryChart.isReady()) {
                 console.log('显示所有火炮到图表');
                 await trajectoryChart.showAll();
+            } else if (cannons.length === 0) {
+                console.log('数据库为空，等待用户添加数据');
             } else {
                 console.warn('图表未就绪，跳过显示火炮');
             }
         } catch (error) {
-            console.error('加载初始数据失败:', error);
-            // 即使加载失败也继续，不抛出错误
-        }
-    }
-
-    // 添加示例数据
-    async addSampleData() {
-        const sampleCannons = [
-            {
-                author: "Steve",
-                name: "基础火炮MK1",
-                trajectoryData: [
-                    { range: 100, low: 12, medium: 25, high: 18 },
-                    { range: 200, low: 24, medium: 48, high: 32 },
-                    { range: 300, low: 36, medium: 72, high: 48 },
-                    { range: 400, low: 42, medium: 86, high: 58 },
-                    { range: 500, low: 48, medium: 96, high: 64 },
-                    { range: 600, low: 52, medium: 104, high: 68 },
-                    { range: 700, low: 54, medium: 108, high: 72 },
-                    { range: 800, low: 56, medium: 112, high: 74 },
-                    { range: 900, low: 58, medium: 116, high: 76 },
-                    { range: 1000, low: 60, medium: 120, high: 78 }
-                ],
-                createdAt: new Date().toISOString()
-            },
-            {
-                author: "Alex",
-                name: "重型火炮V2",
-                trajectoryData: [
-                    { range: 150, low: 18, medium: 35, high: 28 },
-                    { range: 300, low: 45, medium: 88, high: 62 },
-                    { range: 450, low: 68, medium: 132, high: 94 },
-                    { range: 600, low: 88, medium: 168, high: 118 },
-                    { range: 750, low: 102, medium: 196, high: 138 },
-                    { range: 900, low: 114, medium: 218, high: 152 },
-                    { range: 1050, low: 124, medium: 236, high: 164 },
-                    { range: 1200, low: 132, medium: 248, high: 172 },
-                    { range: 1350, low: 138, medium: 256, high: 178 }
-                ],
-                createdAt: new Date().toISOString()
-            },
-            {
-                author: "Notch",
-                name: "精密火炮Pro",
-                trajectoryData: [
-                    { range: 200, low: 32, medium: 58, high: 42 },
-                    { range: 350, low: 58, medium: 112, high: 78 },
-                    { range: 500, low: 82, medium: 158, high: 108 },
-                    { range: 650, low: 102, medium: 196, high: 134 },
-                    { range: 800, low: 118, medium: 226, high: 154 },
-                    { range: 950, low: 132, medium: 248, high: 168 },
-                    { range: 1100, low: 142, medium: 264, high: 178 },
-                    { range: 1250, low: 148, medium: 274, high: 184 }
-                ],
-                createdAt: new Date().toISOString()
-            }
-        ];
-
-        try {
-            for (const cannon of sampleCannons) {
-                await cannonDB.addCannon(cannon);
-            }
-            console.log('示例数据已添加');
-        } catch (error) {
-            console.error('添加示例数据失败:', error);
+            console.error('检查初始数据失败:', error);
+            // 即使检查失败也继续，不抛出错误
         }
     }
 

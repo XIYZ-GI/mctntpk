@@ -365,41 +365,32 @@ class TrajectoryChart {
             }
 
             const range = rangeData.range;
+            let trajectoryCount = 0;
             
-            // 处理三个角度范围的数据
-            if (rangeData.low > 0) {
-                data.push({ x: range, y: rangeData.low });
+            // 使用总弹道数量（所有高度的弹道数量相加）
+            if (typeof rangeData.total !== 'undefined' && rangeData.total > 0) {
+                trajectoryCount = rangeData.total;
+            } else {
+                // 如果没有total字段，则计算总和
+                trajectoryCount = (rangeData.low || 0) + (rangeData.medium || 0) + (rangeData.high || 0);
             }
-            if (rangeData.medium > 0) {
-                data.push({ x: range, y: rangeData.medium });
-            }
-            if (rangeData.high > 0) {
-                data.push({ x: range, y: rangeData.high });
+            
+            // 只有弹道数量大于0的点才添加到图表中
+            if (trajectoryCount > 0) {
+                data.push({ x: range, y: trajectoryCount });
             }
         });
 
         if (data.length === 0) {
+            console.warn('火炮没有有效的弹道数据:', cannon.name);
             return [];
         }
 
         // 按射程排序
         data.sort((a, b) => a.x - b.x);
         
-        // 移除重复的x值，保留y值较大的点
-        const uniqueData = [];
-        const rangeMap = new Map();
-        
-        data.forEach(point => {
-            if (!rangeMap.has(point.x) || rangeMap.get(point.x) < point.y) {
-                rangeMap.set(point.x, point.y);
-            }
-        });
-        
-        rangeMap.forEach((y, x) => {
-            uniqueData.push({ x, y });
-        });
-        
-        return uniqueData.sort((a, b) => a.x - b.x);
+        console.log(`火炮 ${cannon.name} 的数据点:`, data);
+        return data;
     }
 
     // 显示火炮
