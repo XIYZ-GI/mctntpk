@@ -1,29 +1,108 @@
 // 图表管理类
 class TrajectoryChart {
     constructor(canvasId) {
+        this.canvasId = canvasId;
         this.canvas = document.getElementById(canvasId);
         this.chart = null;
         this.visibleCannons = new Set();
         this.isInitialized = false;
-        this.initChart();
+        this.initializationAttempts = 0;
+        this.maxInitAttempts = 10;
+        
+        console.log('TrajectoryChart构造函数被调用');
+        this.waitForChartJS();
+    }
+
+    // 等待Chart.js加载完成
+    waitForChartJS() {
+        console.log('等待Chart.js加载...');
+        
+        // 如果Chart.js已经加载
+        if (typeof Chart !== 'undefined') {
+            console.log('Chart.js已经可用，直接初始化');
+            this.initChart();
+            return;
+        }
+
+        // 监听Chart.js加载事件
+        const onChartJSLoaded = () => {
+            console.log('收到Chart.js加载完成事件');
+            window.removeEventListener('chartjs-loaded', onChartJSLoaded);
+            window.removeEventListener('chartjs-error', onChartJSError);
+            this.initChart();
+        };
+
+        const onChartJSError = () => {
+            console.error('Chart.js加载失败');
+            window.removeEventListener('chartjs-loaded', onChartJSLoaded);
+            window.removeEventListener('chartjs-error', onChartJSError);
+            this.showChartError('图表库加载失败');
+        };
+
+        window.addEventListener('chartjs-loaded', onChartJSLoaded);
+        window.addEventListener('chartjs-error', onChartJSError);
+
+        // 设置超时机制
+        setTimeout(() => {
+            if (!this.isInitialized) {
+                console.error('Chart.js加载超时');
+                window.removeEventListener('chartjs-loaded', onChartJSLoaded);
+                window.removeEventListener('chartjs-error', onChartJSError);
+                this.tryFallbackInit();
+            }
+        }, 10000);
+    }
+
+    // 尝试备用初始化方案
+    tryFallbackInit() {
+        console.log('尝试备用初始化方案...');
+        
+        this.initializationAttempts++;
+        
+        if (this.initializationAttempts >= this.maxInitAttempts) {
+            console.error('达到最大初始化尝试次数');
+            this.showChartError('图表初始化失败，已达到最大重试次数');
+            return;
+        }
+
+        // 检查Chart是否已经可用
+        if (typeof Chart !== 'undefined') {
+            console.log('Chart.js现在可用了，尝试初始化');
+            this.initChart();
+        } else {
+            console.log('Chart.js仍然不可用，1秒后重试');
+            setTimeout(() => this.tryFallbackInit(), 1000);
+        }
     }
 
     // 初始化图表
     initChart() {
         try {
+            console.log('开始初始化图表...');
+            
             if (!this.canvas) {
-                console.error('找不到图表画布元素');
+                console.error('找不到图表画布元素:', this.canvasId);
+                this.showChartError('找不到图表画布');
                 return;
             }
 
-            // 检查Chart.js是否加载
+            // 检查Chart.js是否真正可用
             if (typeof Chart === 'undefined') {
-                console.error('Chart.js未加载');
-                setTimeout(() => this.initChart(), 1000); // 1秒后重试
+                console.error('Chart未定义');
+                this.showChartError('Chart.js未加载');
                 return;
             }
+
+            console.log('Chart.js版本:', Chart.version);
 
             const ctx = this.canvas.getContext('2d');
+            if (!ctx) {
+                console.error('无法获取canvas上下文');
+                this.showChartError('无法获取画布上下文');
+                return;
+            }
+
+            console.log('创建Chart实例...');
             
             this.chart = new Chart(ctx, {
                 type: 'line',
@@ -44,7 +123,16 @@ class TrajectoryChart {
                             }
                         },
                         legend: {
-                            display: false
+                            display: true,
+                            position: 'right',
+                            labels: {
+                                color: '#ffffff',
+                                usePointStyle: true,
+                                padding: 15,
+                                font: {
+                                    size: 12
+                                }
+                            }
                         },
                         tooltip: {
                             mode: 'index',
@@ -137,14 +225,21 @@ class TrajectoryChart {
             this.isInitialized = true;
             console.log('图表初始化成功');
             
+            // 触发初始化完成事件
+            window.dispatchEvent(new CustomEvent('chart-initialized', {
+                detail: { chart: this }
+            }));
+            
         } catch (error) {
             console.error('图表初始化失败:', error);
-            this.showChartError('图表初始化失败');
+            this.showChartError('图表初始化失败: ' + error.message);
         }
     }
 
     // 显示图表错误
     showChartError(message) {
+        console.log('显示图表错误:', message);
+        
         if (this.canvas) {
             const parent = this.canvas.parentElement;
             if (parent) {
@@ -155,23 +250,26 @@ class TrajectoryChart {
                         justify-content: center;
                         align-items: center;
                         height: 100%;
+                        min-height: 300px;
                         color: #fff;
                         background: rgba(255, 255, 255, 0.05);
                         border-radius: 10px;
                         border: 2px dashed rgba(255, 255, 255, 0.3);
+                        padding: 20px;
+                        text-align: center;
                     ">
                         <div style="font-size: 48px; margin-bottom: 15px;">📊</div>
-                        <div style="font-size: 18px; margin-bottom: 10px;">图表暂不可用</div>
-                        <div style="font-size: 14px; color: rgba(255, 255, 255, 0.7);">${message}</div>
+                        <div style="font-size: 18px; margin-bottom: 10px; font-weight: bold;">图表暂不可用</div>
+                        <div style="font-size: 14px; color: rgba(255, 255, 255, 0.7); margin-bottom: 15px;">${message}</div>
                         <button onclick="location.reload()" style="
                             background: #4CAF50;
                             color: white;
                             border: none;
-                            padding: 8px 16px;
+                            padding: 10px 20px;
                             border-radius: 6px;
                             cursor: pointer;
-                            margin-top: 15px;
-                        ">重新加载</button>
+                            font-size: 14px;
+                        ">🔄 重新加载页面</button>
                     </div>
                 `;
             }
@@ -196,14 +294,21 @@ class TrajectoryChart {
         }
 
         try {
+            console.log('开始更新图表...');
+            
             const cannons = await cannonDB.getAllCannons();
+            console.log('获取到火炮数据:', cannons.length, '个');
+            
             const datasets = [];
             let maxRange = 1450;
             let maxTrajectory = 400;
 
             cannons.forEach((cannon, index) => {
                 if (this.visibleCannons.has(cannon.id)) {
+                    console.log('处理火炮:', cannon.name);
                     const data = this.processCannonData(cannon);
+                    console.log('处理后的数据点数量:', data.length);
+                    
                     if (data.length > 0) { // 只有有数据的才添加
                         const color = this.generateColor(index);
                         
@@ -225,6 +330,9 @@ class TrajectoryChart {
                 }
             });
 
+            console.log('数据集数量:', datasets.length);
+            console.log('最大射程:', maxRange, '最大弹道:', maxTrajectory);
+
             // 更新图表数据和坐标轴范围
             this.chart.data.datasets = datasets;
             this.chart.options.scales.x.max = maxRange;
@@ -235,6 +343,7 @@ class TrajectoryChart {
             this.chart.options.scales.y.ticks.stepSize = Math.max(50, Math.round(maxTrajectory / 10));
             
             this.chart.update('none'); // 使用'none'模式加快更新速度
+            console.log('图表更新完成');
             
         } catch (error) {
             console.error('图表更新失败:', error);
@@ -295,12 +404,14 @@ class TrajectoryChart {
 
     // 显示火炮
     showCannon(cannonId) {
+        console.log('显示火炮:', cannonId);
         this.visibleCannons.add(cannonId);
         this.updateChart();
     }
 
     // 隐藏火炮
     hideCannon(cannonId) {
+        console.log('隐藏火炮:', cannonId);
         this.visibleCannons.delete(cannonId);
         this.updateChart();
     }
@@ -308,6 +419,7 @@ class TrajectoryChart {
     // 显示所有火炮
     async showAll() {
         try {
+            console.log('显示所有火炮');
             const cannons = await cannonDB.getAllCannons();
             cannons.forEach(cannon => {
                 this.visibleCannons.add(cannon.id);
@@ -320,6 +432,7 @@ class TrajectoryChart {
 
     // 隐藏所有火炮
     hideAll() {
+        console.log('隐藏所有火炮');
         this.visibleCannons.clear();
         this.updateChart();
     }
