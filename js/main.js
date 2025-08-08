@@ -1,15 +1,31 @@
 // 主程序入口
 class MinecraftCannonApp {
     constructor() {
+        this.initTimeout = null;
         this.init();
     }
 
     // 初始化应用程序
     async init() {
         try {
+            // 显示加载状态
+            this.showLoadingMessage('正在初始化应用程序...');
+            
+            // 设置初始化超时
+            this.initTimeout = setTimeout(() => {
+                this.showError('初始化超时，正在尝试备用方案...');
+                this.forceInit();
+            }, 10000);
+
             // 等待数据库初始化完成
             await cannonDB.init();
-            console.log('数据库初始化完成');
+            console.log('数据库初始化完成，存储类型:', cannonDB.getStorageType());
+            
+            // 清除超时
+            if (this.initTimeout) {
+                clearTimeout(this.initTimeout);
+                this.initTimeout = null;
+            }
             
             // 初始化图表
             trajectoryChart = new TrajectoryChart('trajectoryChart');
@@ -21,24 +37,149 @@ class MinecraftCannonApp {
             // 更新UI
             await uiManager.updateCannonList();
             
+            // 隐藏加载状态
+            this.hideLoadingMessage();
+            
+            this.showSuccess(`应用程序初始化完成 (${cannonDB.getStorageType()})`);
             console.log('应用程序初始化完成');
+            
         } catch (error) {
             console.error('应用程序初始化失败:', error);
-            this.showError('应用程序初始化失败，请刷新页面重试');
+            this.hideLoadingMessage();
+            
+            // 尝试强制初始化
+            this.forceInit();
+        }
+    }
+
+    // 强制初始化（备用方案）
+    async forceInit() {
+        try {
+            console.log('尝试强制初始化...');
+            
+            // 直接使用内存存储
+            if (!cannonDB.isInitialized()) {
+                cannonDB.useMemoryStorage = true;
+                cannonDB.memoryStorage = [];
+                cannonDB.isReady = true;
+            }
+            
+            // 初始化图表
+            if (!trajectoryChart) {
+                trajectoryChart = new TrajectoryChart('trajectoryChart');
+            }
+            
+            // 加载基本数据
+            await this.loadInitialData();
+            await uiManager.updateCannonList();
+            
+            this.hideLoadingMessage();
+            this.showSuccess('应用程序初始化完成 (内存存储模式)');
+            
+        } catch (error) {
+            console.error('强制初始化也失败:', error);
+            this.hideLoadingMessage();
+            this.showFatalError();
+        }
+    }
+
+    // 显示致命错误
+    showFatalError() {
+        const container = document.querySelector('.container');
+        if (container) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 50px; color: #fff;">
+                    <h2 style="color: #f44336; margin-bottom: 20px;">🚫 初始化失败</h2>
+                    <p style="margin-bottom: 20px;">应用程序无法正常启动，可能的原因：</p>
+                    <ul style="text-align: left; max-width: 400px; margin: 0 auto 20px;">
+                        <li>浏览器不支持现代Web技术</li>
+                        <li>存储空间不足</li>
+                        <li>浏览器安全限制</li>
+                    </ul>
+                    <button onclick="location.reload()" style="
+                        background: #4CAF50;
+                        color: white;
+                        border: none;
+                        padding: 12px 24px;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-size: 16px;
+                    ">🔄 重新加载页面</button>
+                </div>
+            `;
+        }
+    }
+
+    // 显示加载消息
+    showLoadingMessage(message) {
+        this.hideLoadingMessage(); // 先隐藏之前的消息
+        
+        const loadingDiv = document.createElement('div');
+        loadingDiv.id = 'loading-message';
+        loadingDiv.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        `;
+        
+        loadingDiv.innerHTML = `
+            <div style="
+                width: 20px;
+                height: 20px;
+                border: 2px solid #fff;
+                border-top: 2px solid transparent;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            "></div>
+            <span>${message}</span>
+            <style>
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            </style>
+        `;
+        
+        document.body.appendChild(loadingDiv);
+    }
+
+    // 隐藏加载消息
+    hideLoadingMessage() {
+        const loadingDiv = document.getElementById('loading-message');
+        if (loadingDiv) {
+            loadingDiv.remove();
         }
     }
 
     // 加载初始数据
     async loadInitialData() {
-        const cannons = await cannonDB.getAllCannons();
-        
-        // 如果没有数据，添加示例数据
-        if (cannons.length === 0) {
-            await this.addSampleData();
+        try {
+            const cannons = await cannonDB.getAllCannons();
+            
+            // 如果没有数据，添加示例数据
+            if (cannons.length === 0) {
+                await this.addSampleData();
+            }
+            
+            // 默认显示所有火炮
+            if (trajectoryChart) {
+                await trajectoryChart.showAll();
+            }
+        } catch (error) {
+            console.error('加载初始数据失败:', error);
+            // 即使加载失败也继续，不抛出错误
         }
-        
-        // 默认显示所有火炮
-        await trajectoryChart.showAll();
     }
 
     // 添加示例数据
@@ -94,11 +235,14 @@ class MinecraftCannonApp {
             }
         ];
 
-        for (const cannon of sampleCannons) {
-            await cannonDB.addCannon(cannon);
+        try {
+            for (const cannon of sampleCannons) {
+                await cannonDB.addCannon(cannon);
+            }
+            console.log('示例数据已添加');
+        } catch (error) {
+            console.error('添加示例数据失败:', error);
         }
-        
-        console.log('示例数据已添加');
     }
 
     // 显示错误信息
@@ -116,16 +260,35 @@ class MinecraftCannonApp {
             z-index: 10000;
             max-width: 300px;
             font-weight: bold;
+            animation: slideIn 0.3s ease;
         `;
-        errorDiv.textContent = message;
+        errorDiv.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>${message}</span>
+                <button onclick="this.parentElement.parentElement.remove()" style="
+                    background: none;
+                    border: none;
+                    color: white;
+                    font-size: 18px;
+                    cursor: pointer;
+                    margin-left: 10px;
+                ">&times;</button>
+            </div>
+            <style>
+                @keyframes slideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+            </style>
+        `;
         
         document.body.appendChild(errorDiv);
         
         setTimeout(() => {
             if (errorDiv.parentNode) {
-                errorDiv.parentNode.removeChild(errorDiv);
+                errorDiv.remove();
             }
-        }, 5000);
+        }, 8000);
     }
 
     // 显示成功信息
@@ -143,30 +306,77 @@ class MinecraftCannonApp {
             z-index: 10000;
             max-width: 300px;
             font-weight: bold;
+            animation: slideIn 0.3s ease;
         `;
-        successDiv.textContent = message;
+        successDiv.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>${message}</span>
+                <button onclick="this.parentElement.parentElement.remove()" style="
+                    background: none;
+                    border: none;
+                    color: white;
+                    font-size: 18px;
+                    cursor: pointer;
+                    margin-left: 10px;
+                ">&times;</button>
+            </div>
+        `;
         
         document.body.appendChild(successDiv);
         
         setTimeout(() => {
             if (successDiv.parentNode) {
-                successDiv.parentNode.removeChild(successDiv);
+                successDiv.remove();
             }
-        }, 3000);
+        }, 5000);
     }
 }
 
 // 页面加载完成后启动应用程序
 document.addEventListener('DOMContentLoaded', () => {
     console.log('页面加载完成，启动应用程序...');
-    new MinecraftCannonApp();
+    
+    // 检查基本的浏览器支持
+    if (typeof Promise === 'undefined') {
+        document.body.innerHTML = `
+            <div style="text-align: center; padding: 50px; color: #fff;">
+                <h2 style="color: #f44336;">浏览器版本过低</h2>
+                <p>请使用现代浏览器访问此应用</p>
+            </div>
+        `;
+        return;
+    }
+    
+    try {
+        new MinecraftCannonApp();
+    } catch (error) {
+        console.error('应用启动失败:', error);
+        document.body.innerHTML = `
+            <div style="text-align: center; padding: 50px; color: #fff;">
+                <h2 style="color: #f44336;">启动失败</h2>
+                <p>应用程序无法启动，请刷新页面重试</p>
+                <button onclick="location.reload()" style="
+                    background: #4CAF50;
+                    color: white;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 16px;
+                    margin-top: 20px;
+                ">刷新页面</button>
+            </div>
+        `;
+    }
 });
 
 // 处理页面可见性变化
 document.addEventListener('visibilitychange', () => {
     if (!document.hidden && trajectoryChart) {
         // 页面重新可见时刷新图表
-        trajectoryChart.updateChart();
+        setTimeout(() => {
+            trajectoryChart.updateChart();
+        }, 100);
     }
 });
 
@@ -175,16 +385,25 @@ window.addEventListener('resize', () => {
     if (trajectoryChart && trajectoryChart.chart) {
         setTimeout(() => {
             trajectoryChart.chart.resize();
-        }, 100);
+        }, 200);
     }
 });
 
 // 防止页面意外关闭时丢失正在编辑的数据
 window.addEventListener('beforeunload', (e) => {
     const addModal = document.getElementById('addModal');
-    if (addModal.style.display === 'block') {
+    if (addModal && addModal.style.display === 'block') {
         e.preventDefault();
         e.returnValue = '您有未保存的火炮数据，确定要离开吗？';
         return e.returnValue;
     }
+});
+
+// 全局错误处理
+window.addEventListener('error', (e) => {
+    console.error('全局错误:', e.error);
+});
+
+window.addEventListener('unhandledrejection', (e) => {
+    console.error('未处理的Promise拒绝:', e.reason);
 });
