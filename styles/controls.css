@@ -1,0 +1,237 @@
+/* 控制区域样式 */
+.sampling-controls {
+    background: linear-gradient(135deg, #1e2a1e, #2a3e2a);
+    border: 1px solid #4a5a4a;
+}
+
+.control-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    align-items: end;
+}
+
+.control-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.control-item label {
+    color: #4ecdc4;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.control-item input {
+    padding: 12px 15px;
+    border: 2px solid #444;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #2a2a3a, #3a3a4a);
+    color: #ffffff;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.control-item input:focus {
+    outline: none;
+    border-color: #4ecdc4;
+    box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.1);
+    background: linear-gradient(135deg, #3a3a4a, #4a4a5a);
+}
+
+.control-item input:invalid {
+    border-color: #ff6b6b;
+}
+
+/* 预设曲线控制区域 */
+.preset-curves {
+    background: linear-gradient(135deg, #2a1e2a, #3e2a3e);
+    border: 1px solid #5a4a5a;
+}
+
+.preset-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+}
+
+.preset-buttons .btn-preset {
+    min-width: 180px;
+    padding: 12px 20px;
+    font-size: 0.95rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.preset-buttons .btn-preset::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.preset-buttons .btn-preset:hover::before {
+    left: 100%;
+}
+
+/* 状态指示器 */
+.status-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-left: 10px;
+    animation: pulse 2s infinite;
+}
+
+.status-indicator.loading {
+    background: #feca57;
+}
+
+.status-indicator.success {
+    background: #48cae4;
+}
+
+.status-indicator.error {
+    background: #ff6b6b;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(78, 205, 196, 0.7);
+    }
+    
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 10px rgba(78, 205, 196, 0);
+    }
+    
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(78, 205, 196, 0);
+    }
+}
+
+/* 工具提示 */
+.tooltip {
+    position: relative;
+    cursor: help;
+}
+
+.tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(30, 30, 46, 0.95);
+    color: #ffffff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    border: 1px solid #4ecdc4;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+}
+
+.tooltip::before {
+    content: '';
+    position: absolute;
+    bottom: 115%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #4ecdc4;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.tooltip:hover::after,
+.tooltip:hover::before {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* 滑块样式 */
+.range-slider {
+    position: relative;
+    margin: 20px 0;
+}
+
+.range-slider input[type="range"] {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: #333;
+    outline: none;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    appearance: none;
+}
+
+.range-slider input[type="range"]:hover {
+    opacity: 1;
+}
+
+.range-slider input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #4ecdc4;
+    cursor: pointer;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.range-slider input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #4ecdc4;
+    cursor: pointer;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* 响应式控制区域 */
+@media (max-width: 768px) {
+    .control-group {
+        grid-template-columns: 1fr;
+    }
+    
+    .preset-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .preset-buttons .btn-preset {
+        min-width: auto;
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .control-item input {
+        padding: 10px 12px;
+        font-size: 0.9rem;
+    }
+    
+    .preset-buttons .btn-preset {
+        padding: 10px 15px;
+        font-size: 0.9rem;
+    }
+}

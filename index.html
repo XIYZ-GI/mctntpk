@@ -3,170 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minecraft火炮火力曲线</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/responsive.css">
+    <title>红石火炮数据分析系统</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/charts.css">
+    <link rel="stylesheet" href="styles/controls.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dexie@3.2.4/dist/dexie.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <!-- 标题 -->
         <header class="header">
-            <h1>Minecraft火炮火力曲线</h1>
+            <h1>红石火炮数据分析系统</h1>
+            <p class="subtitle">TNT火炮射程与弹道数据可视化平台</p>
         </header>
 
-        <!-- 修改区域 -->
-        <section class="modify-section">
-            <div class="button-group">
-                <button id="addBtn" class="btn btn-primary">📝 添加</button>
-                <button id="deleteBtn" class="btn btn-danger">🗑️ 删除</button>
-                <button id="importBtn" class="btn btn-success">📁 导入</button>
-                <button id="exportBtn" class="btn btn-info">💾 导出</button>
-            </div>
-        </section>
-
-        <div class="main-content">
-            <!-- 曲线图区域 -->
+        <main class="main-content">
+            <!-- 综合火力曲线图区域 -->
             <section class="chart-section">
+                <div class="chart-header">
+                    <h2 id="chart-title">综合火力曲线 - 射程与弹道</h2>
+                    <div class="chart-controls">
+                        <button id="show-all-btn" class="btn btn-primary">全部显示</button>
+                        <button id="hide-all-btn" class="btn btn-secondary">全部隐藏</button>
+                    </div>
+                </div>
                 <div class="chart-container">
-                    <canvas id="trajectoryChart"></canvas>
+                    <canvas id="main-chart"></canvas>
                 </div>
             </section>
 
-            <!-- 曲线图设置区域 -->
-            <section class="settings-section">
-                <div class="visibility-controls">
-                    <button id="showAllBtn" class="btn btn-outline">全部显示</button>
-                    <button id="hideAllBtn" class="btn btn-outline">全部隐藏</button>
-                </div>
-                <div id="cannonList" class="cannon-list">
-                    <!-- 火炮列表将动态生成 -->
+            <!-- 采样范围控制区域 -->
+            <section class="sampling-controls">
+                <h3>采样范围设置</h3>
+                <div class="control-group">
+                    <div class="control-item">
+                        <label for="horizontal-min">水平偏移最小值 (-200~200):</label>
+                        <input type="number" id="horizontal-min" min="-200" max="200" value="-200">
+                    </div>
+                    <div class="control-item">
+                        <label for="horizontal-max">水平偏移最大值 (-200~200):</label>
+                        <input type="number" id="horizontal-max" min="-200" max="200" value="200">
+                    </div>
+                    <div class="control-item">
+                        <label for="vertical-min">垂直偏移最小值 (-40~170):</label>
+                        <input type="number" id="vertical-min" min="-40" max="170" value="-40">
+                    </div>
+                    <div class="control-item">
+                        <label for="vertical-max">垂直偏移最大值 (-40~170):</label>
+                        <input type="number" id="vertical-max" min="-40" max="170" value="170">
+                    </div>
+                    <button id="apply-range-btn" class="btn btn-primary">应用范围</button>
                 </div>
             </section>
-        </div>
+
+            <!-- 预设曲线选择区域 -->
+            <section class="preset-curves">
+                <h3>预设火力曲线</h3>
+                <div class="preset-buttons">
+                    <button class="btn btn-preset" data-preset="comprehensive">综合火力</button>
+                    <button class="btn btn-preset" data-preset="flat">平射火力 (垂直0~40)</button>
+                    <button class="btn btn-preset" data-preset="high">高射火力 (垂直40~80)</button>
+                    <button class="btn btn-preset" data-preset="antiair">防空火力 (垂直80~170)</button>
+                    <button class="btn btn-preset" data-preset="halfaxis">半轴火力 (水平0~40)</button>
+                </div>
+            </section>
+
+            <!-- 火炮列表区域 -->
+            <section class="cannons-list">
+                <h3>火炮列表</h3>
+                <div id="authors-container"></div>
+            </section>
+
+            <!-- 图例区域 -->
+            <section class="legend-section">
+                <h3>当前显示的火炮</h3>
+                <div id="legend-container"></div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>&copy; 2024 TNT火炮数据分析系统 - 数据来源: tntpk.oooiai.com</p>
+        </footer>
     </div>
 
-    <!-- 添加火炮弹窗 -->
-    <div id="addModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>添加新火炮</h2>
-                <span class="close">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>极限射程 (格):</label>
-                    <input type="number" id="maxRange" value="1250" min="100" max="5000">
-                </div>
-                <div class="form-group">
-                    <label>射程采样频率 (格):</label>
-                    <input type="number" id="sampleFreq" value="50" min="10" max="200">
-                </div>
-                <button id="applyBasicBtn" class="btn btn-primary">✅ 确认基础数值</button>
-                
-                <div id="detailsForm" class="details-form" style="display: none;">
-                    <div class="form-group">
-                        <label>作者名称:</label>
-                        <input type="text" id="authorInput" placeholder="输入作者名称">
-                        <select id="authorSelect">
-                            <option value="">选择已有作者</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>火炮名称:</label>
-                        <input type="text" id="cannonName" placeholder="输入火炮名称" required>
-                    </div>
-                    
-                    <div id="rangeCards" class="range-cards">
-                        <!-- 射程卡片将动态生成 -->
-                    </div>
-                    
-                    <button id="confirmAddBtn" class="btn btn-success">🚀 确认添加</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 删除火炮弹窗 -->
-    <div id="deleteModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>删除火炮</h2>
-                <span class="close">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div id="deleteCannonList" class="delete-cannon-list">
-                    <!-- 删除列表将动态生成 -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 确认删除弹窗 -->
-    <div id="confirmDeleteModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>确认删除</h2>
-                <span class="close">&times;</span>
-            </div>
-            <div class="modal-body">
-                <p id="deleteConfirmText"></p>
-                <div class="button-group">
-                    <button id="confirmDeleteBtn" class="btn btn-danger">🗑️ 确认删除</button>
-                    <button id="cancelDeleteBtn" class="btn btn-outline">❌ 取消</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 隐藏的文件输入 -->
-    <input type="file" id="fileInput" accept=".json" style="display: none;">
-
-    <!-- 加载Chart.js -->
-    <script>
-        // 检查Chart.js加载状态
-        let chartJSLoaded = false;
-        let chartJSError = false;
-        
-        function loadChartJS() {
-            const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js';
-            script.onload = function() {
-                console.log('Chart.js加载成功');
-                chartJSLoaded = true;
-                window.dispatchEvent(new Event('chartjs-loaded'));
-            };
-            script.onerror = function() {
-                console.error('Chart.js加载失败，尝试备用CDN');
-                chartJSError = true;
-                loadChartJSFallback();
-            };
-            document.head.appendChild(script);
-        }
-        
-        function loadChartJSFallback() {
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/chart.js@3.9.1/dist/chart.min.js';
-            script.onload = function() {
-                console.log('Chart.js备用CDN加载成功');
-                chartJSLoaded = true;
-                chartJSError = false;
-                window.dispatchEvent(new Event('chartjs-loaded'));
-            };
-            script.onerror = function() {
-                console.error('所有Chart.js CDN都加载失败');
-                chartJSError = true;
-                window.dispatchEvent(new Event('chartjs-error'));
-            };
-            document.head.appendChild(script);
-        }
-        
-        // 开始加载Chart.js
-        loadChartJS();
-    </script>
-
-    <script src="js/database.js"></script>
-    <script src="js/chart.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/main.js"></script>
+    <script src="scripts/database.js"></script>
+    <script src="scripts/api.js"></script>
+    <script src="scripts/charts.js"></script>
+    <script src="scripts/controls.js"></script>
+    <script src="scripts/main.js"></script>
 </body>
 </html>
